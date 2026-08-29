@@ -1,0 +1,23 @@
+# .github/workflows/keep-alive.yml
+name: Keep Render Alive
+
+on:
+  schedule:
+    # Run every 10 minutes to prevent free tier spin-down
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ping-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render Backend Health
+        run: |
+          # Render free tier spins down after 15 min inactivity
+          # This keeps it warm by pinging /health every 10 minutes
+          curl -f -s -o /dev/null -w "%{http_code}" \
+            https://pulse-api.onrender.com/health \
+            || (echo "Health check failed" && exit 1)
+        env:
+          # Override with your actual Render URL if different
+          RENDER_URL: https://pulse-api.onrender.com

@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import List, Optional
+import json
 
 
 class Settings(BaseSettings):
@@ -14,7 +15,15 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./pulse.db"
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    # CORS_ORIGINS can be set as JSON array string in env: '["https://a.com", "https://b.com"]'
+    CORS_ORIGINS_JSON: str = '["http://localhost:3000"]'
+
+    @property
+    def CORS_ORIGINS(self) -> List[str]:
+        try:
+            return json.loads(self.CORS_ORIGINS_JSON)
+        except json.JSONDecodeError:
+            return ["http://localhost:3000"]
 
     GITHUB_CLIENT_ID: Optional[str] = None
     GITHUB_CLIENT_SECRET: Optional[str] = None

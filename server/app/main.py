@@ -5,6 +5,8 @@ from app.api.v1 import auth, clients, drafts
 from app.core.database import Base, engine
 from app import models  # Import models to register tables with Base.metadata
 
+# Create tables on startup (for SQLite/dev)
+# In production, use alembic migrations
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
@@ -27,4 +29,18 @@ app.include_router(drafts.router, prefix=f"{settings.API_V1_PREFIX}", tags=["dra
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    """Health check endpoint for Render/load balancer."""
+    return {
+        "status": "healthy",
+        "service": "pulse-api",
+        "version": "1.0.0"
+    }
+
+
+@app.get("/")
+def root():
+    return {
+        "service": "Pulse API",
+        "version": "1.0.0",
+        "docs": f"{settings.API_V1_PREFIX}/docs"
+    }
