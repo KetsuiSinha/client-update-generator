@@ -9,8 +9,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Output file tracing for better caching (moved out of experimental in Next.js 15+)
-  outputFileTracingRoot: __dirname,
+  // Output standalone for Vercel deployment compatibility
+  output: "standalone",
   // Security headers
   async headers() {
     return [
@@ -25,8 +25,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Ensure trailing slashes for consistent routing
-  trailingSlash: false,
 };
 
 export default nextConfig;
