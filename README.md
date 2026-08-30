@@ -265,4 +265,4 @@ npm run build   # includes TypeScript check
 
 ## License
 
-MIT
+MIT# Force redeploy Sun, Aug 30, 2026 12:39:30 PM
