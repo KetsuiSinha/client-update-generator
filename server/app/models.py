@@ -43,7 +43,11 @@ class Client(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     owner = relationship("User", back_populates="clients")
-    tone_profile = relationship("ToneProfile", back_populates="clients")
+    tone_profile = relationship(
+        "ToneProfile",
+        back_populates="clients",
+        foreign_keys=[tone_profile_id]
+    )
     integrations = relationship("ClientIntegration", back_populates="client")
     drafts = relationship("Draft", back_populates="client")
 
