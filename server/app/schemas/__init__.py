@@ -3,17 +3,8 @@ from typing import Optional, List
 from pydantic import BaseModel, EmailStr, Field
 from enum import Enum
 
-
-class IntegrationProvider(str, Enum):
-    GITHUB = "github"
-    LINEAR = "linear"
-    SLACK = "slack"
-    TRELLO = "trello"
-
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
+from app.models import IntegrationProvider
+from app.schemas.user import Token
 
 
 class TokenData(BaseModel):

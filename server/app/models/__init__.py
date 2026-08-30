@@ -9,6 +9,13 @@ import enum
 from app.core.database import Base
 
 
+class IntegrationProvider(str, enum.Enum):
+    GITHUB = "github"
+    LINEAR = "linear"
+    SLACK = "slack"
+    TRELLO = "trello"
+
+
 class Client(Base):
     __tablename__ = "clients"
 

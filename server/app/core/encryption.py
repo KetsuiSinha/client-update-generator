@@ -1,14 +1,21 @@
 from cryptography.fernet import Fernet
+from typing import Optional
 from app.core.config import settings
 
-# Generate a key if not present (in production, use a stable key from env)
+
 def get_encryption_key() -> bytes:
-    """Get or generate encryption key for token storage."""
-    key = getattr(settings, 'ENCRYPTION_KEY', None)
-    if key:
-        return key.encode() if isinstance(key, str) else key
-    # Generate a new key for development (in production, set ENCRYPTION_KEY in .env)
-    return Fernet.generate_key()
+    """Get encryption key for token storage.
+
+    Key must be set via ENCRYPTION_KEY environment variable.
+    Never generate a new key at runtime - this would invalidate all stored tokens.
+    """
+    key_str: Optional[str] = getattr(settings, 'ENCRYPTION_KEY', None)
+    if not key_str:
+        raise ValueError(
+            "ENCRYPTION_KEY must be set in environment or .env file. "
+            "Do not generate a new key at runtime - this invalidates all stored tokens."
+        )
+    return key_str.encode() if isinstance(key_str, str) else key_str
 
 
 def encrypt_token(token: str) -> str:
