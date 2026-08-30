@@ -142,7 +142,7 @@ Generate the weekly update as JSON with keys: done, in_progress, blocked, next."
 class LLMProvider:
     """Abstract base for LLM providers."""
 
-    async def generate(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
+    def generate(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
         raise NotImplementedError
 
 
@@ -154,12 +154,12 @@ class AnthropicProvider(LLMProvider):
         self.model = model
         self.client = None
 
-    async def generate(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
+    def generate(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
         import anthropic
         if not self.client:
-            self.client = anthropic.AsyncAnthropic(api_key=self.api_key)
+            self.client = anthropic.Anthropic(api_key=self.api_key)
 
-        response = await self.client.messages.create(
+        response = self.client.messages.create(
             model=self.model,
             max_tokens=2000,
             temperature=0.3,
@@ -177,12 +177,12 @@ class OpenAIProvider(LLMProvider):
         self.model = model
         self.client = None
 
-    async def generate(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
+    def generate(self, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
         import openai
         if not self.client:
-            self.client = openai.AsyncOpenAI(api_key=self.api_key)
+            self.client = openai.OpenAI(api_key=self.api_key)
 
-        response = await self.client.chat.completions.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -213,7 +213,7 @@ def get_llm_provider() -> Optional[LLMProvider]:
     return None
 
 
-async def generate_draft(
+def generate_draft(
     client_name: str,
     week_of: datetime,
     activity_events: List[Dict[str, Any]],
@@ -235,7 +235,7 @@ async def generate_draft(
     prompt = build_generation_prompt(client_name, week_of, activity_events, tone)
 
     try:
-        response = await provider.generate(prompt)
+        response = provider.generate(prompt)
         draft = json.loads(response)
 
         # Validate structure

@@ -5,8 +5,9 @@ from app.api.v1 import auth, clients, drafts
 from app.core.database import Base, engine
 from app import models  # Import models to register tables with Base.metadata
 
-# Create tables on startup (for SQLite/dev) - use sync engine for metadata creation
-Base.metadata.create_all(bind=engine.sync_engine)
+# Create tables on startup (for SQLite/dev)
+# In production, use alembic migrations
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.APP_NAME,

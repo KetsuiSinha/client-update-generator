@@ -9,9 +9,8 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Dict, Any, Optional
 import logging
 
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.orm import Session
+from sqlalchemy import select, and_
 
 from app.models import Integration, Client, ClientProjectLink, ActivityEvent, ActivityEventType
 from app.services.github import (
@@ -26,9 +25,9 @@ from app.services.relevance import calculate_relevance
 logger = logging.getLogger(__name__)
 
 
-async def ingest_client_activity(
+def ingest_client_activity(
     client_id: int,
-    db: AsyncSession,
+    db: Session,
     weeks_back: int = 1,
 ) -> Dict[str, int]:
     """
@@ -44,7 +43,7 @@ async def ingest_client_activity(
     }
 
     # Get all active GitHub integrations for this client
-    result = await db.execute(
+    result = db.execute(
         select(Integration, ClientProjectLink)
         .join(ClientProjectLink, Integration.id == ClientProjectLink.integration_id)
         .where(
@@ -64,7 +63,7 @@ async def ingest_client_activity(
 
     for integration, project_link in integrations:
         try:
-            client_summary = await _ingest_github_integration(
+            client_summary = _ingest_github_integration(
                 integration, project_link, client_id, since, db
             )
             summary["events_fetched"] += client_summary["events_fetched"]
@@ -74,17 +73,17 @@ async def ingest_client_activity(
             logger.error(f"Error ingesting for integration {integration.id}: {e}")
             summary["errors"] += 1
 
-    await db.commit()
+    db.commit()
     logger.info(f"Ingestion complete for client {client_id}: {summary}")
     return summary
 
 
-async def _ingest_github_integration(
+def _ingest_github_integration(
     integration: Integration,
     project_link: ClientProjectLink,
     client_id: int,
     since: datetime,
-    db: AsyncSession,
+    db: Session,
 ) -> Dict[str, int]:
     """Ingest activity from a single GitHub integration."""
     summary = {
@@ -94,7 +93,7 @@ async def _ingest_github_integration(
     }
 
     # Create GitHub client
-    github_client = await create_github_client(integration.access_token_encrypted)
+    github_client = create_github_client(integration.access_token_encrypted)
 
     try:
         # Parse external_project_ref (format: "owner/repo")
@@ -106,15 +105,15 @@ async def _ingest_github_integration(
         owner, repo = external_ref.split("/", 1)
 
         # Fetch commits
-        commits = await github_client.get_repo_commits(owner, repo, since=since)
+        commits = github_client.get_repo_commits(owner, repo, since=since)
         summary["events_fetched"] += len(commits)
 
         for commit in commits:
             normalized = normalize_commit(commit, external_ref)
-            await _store_activity_event(normalized, client_id, integration.id, db, summary)
+            _store_activity_event(normalized, client_id, integration.id, db, summary)
 
         # Fetch pull requests
-        prs = await github_client.get_repo_pull_requests(owner, repo)
+        prs = github_client.get_repo_pull_requests(owner, repo)
         # Filter by updated date
         filtered_prs = [
             pr for pr in prs
@@ -124,18 +123,18 @@ async def _ingest_github_integration(
 
         for pr in filtered_prs:
             normalized = normalize_pull_request(pr, external_ref)
-            await _store_activity_event(normalized, client_id, integration.id, db, summary)
+            _store_activity_event(normalized, client_id, integration.id, db, summary)
 
         # Fetch issues
-        issues = await github_client.get_repo_issues(owner, repo, since=since)
+        issues = github_client.get_repo_issues(owner, repo, since=since)
         summary["events_fetched"] += len(issues)
 
         for issue in issues:
             normalized = normalize_issue(issue, external_ref)
-            await _store_activity_event(normalized, client_id, integration.id, db, summary)
+            _store_activity_event(normalized, client_id, integration.id, db, summary)
 
         # Fetch releases
-        releases = await github_client.get_repo_releases(owner, repo)
+        releases = github_client.get_repo_releases(owner, repo)
         filtered_releases = [
             r for r in releases
             if r.get("published_at") and datetime.fromisoformat(r["published_at"].replace("Z", "+00:00")) >= since
@@ -144,22 +143,22 @@ async def _ingest_github_integration(
 
         for release in filtered_releases:
             normalized = normalize_release(release, external_ref)
-            await _store_activity_event(normalized, client_id, integration.id, db, summary)
+            _store_activity_event(normalized, client_id, integration.id, db, summary)
 
         # Update last_sync
         integration.last_sync = datetime.now(timezone.utc)
 
     finally:
-        await github_client.close()
+        github_client.close()
 
     return summary
 
 
-async def _store_activity_event(
+def _store_activity_event(
     normalized: Dict[str, Any],
     client_id: int,
     integration_id: int,
-    db: AsyncSession,
+    db: Session,
     summary: Dict[str, int],
 ) -> None:
     """Store a normalized activity event if it passes relevance filter."""
@@ -172,9 +171,7 @@ async def _store_activity_event(
         return
 
     # Check for duplicate using raw_ref + integration_id
-    # For SQLite, use INSERT OR IGNORE with a unique constraint
-    # First check if exists
-    existing = await db.execute(
+    existing = db.execute(
         select(ActivityEvent).where(
             and_(
                 ActivityEvent.integration_id == integration_id,
@@ -205,13 +202,13 @@ async def _store_activity_event(
     summary["events_stored"] += 1
 
 
-async def ingest_all_clients_weekly(db: AsyncSession) -> Dict[str, Any]:
+def ingest_all_clients_weekly(db: Session) -> Dict[str, Any]:
     """
     Weekly ingestion job for all clients with active integrations.
     This would be called by Celery beat on a schedule.
     """
     # Get all clients with active GitHub integrations
-    result = await db.execute(
+    result = db.execute(
         select(Client.id)
         .join(ClientProjectLink, Client.id == ClientProjectLink.client_id)
         .join(Integration, ClientProjectLink.integration_id == Integration.id)
@@ -233,7 +230,7 @@ async def ingest_all_clients_weekly(db: AsyncSession) -> Dict[str, Any]:
 
     for client_id in client_ids:
         try:
-            summary = await ingest_client_activity(client_id, db, weeks_back=1)
+            summary = ingest_client_activity(client_id, db, weeks_back=1)
             total_summary["clients_processed"] += 1
             total_summary["total_events_fetched"] += summary["events_fetched"]
             total_summary["total_events_stored"] += summary["events_stored"]
@@ -243,6 +240,6 @@ async def ingest_all_clients_weekly(db: AsyncSession) -> Dict[str, Any]:
             logger.error(f"Error processing client {client_id}: {e}")
             total_summary["total_errors"] += 1
 
-    await db.commit()
+    db.commit()
     logger.info(f"Weekly ingestion complete: {total_summary}")
     return total_summary

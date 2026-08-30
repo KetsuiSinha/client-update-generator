@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select, text
 from datetime import datetime, timedelta
 import httpx
@@ -24,20 +24,20 @@ router = APIRouter()
 
 
 @router.get("/testdb")
-async def testdb(db: AsyncSession = Depends(get_db)):
+def testdb(db: Session = Depends(get_db)):
     try:
-        result = await db.execute(text("SELECT 1"))
+        result = db.execute(text("SELECT 1"))
         return {"status": "ok", "result": result.scalar()}
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
-async def register(
+def register(
     user_in: UserCreate,
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
-    existing = await db.execute(select(User).where(User.email == user_in.email))
+    existing = db.execute(select(User).where(User.email == user_in.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -47,15 +47,15 @@ async def register(
         full_name=user_in.full_name,
     )
     db.add(user)
-    await db.commit()
-    await db.refresh(user)
+    db.commit()
+    db.refresh(user)
     return user
 
 
 @router.post("/login", response_model=Token)
 async def login(
     request: Request,
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     content_type = request.headers.get("content-type")
     if content_type == "application/json":
@@ -74,7 +74,7 @@ async def login(
             detail="Email and password are required",
         )
 
-    existing = await db.execute(select(User).where(User.email == email))
+    existing = db.execute(select(User).where(User.email == email))
     user = existing.scalar_one_or_none()
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
@@ -91,9 +91,9 @@ async def login(
 
 
 @router.post("/refresh", response_model=Token)
-async def refresh_token(
+def refresh_token(
     refresh_token: str,
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     from jose import jwt, JWTError
     try:
@@ -104,7 +104,7 @@ async def refresh_token(
     except (JWTError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found or inactive")
@@ -157,7 +157,7 @@ async def github_oauth_callback(
     request: Request,
     code: str,
     state: str,
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     """Handle GitHub OAuth callback - exchange code for token and store integration."""
     if not settings.GITHUB_CLIENT_ID or not settings.GITHUB_CLIENT_SECRET:
@@ -231,7 +231,7 @@ async def github_oauth_callback(
         primary_email = f"{github_login}@github.local"
 
     # Find or create user
-    result = await db.execute(select(User).where(V.email == primary_email))
+    result = db.execute(select(User).where(User.email == primary_email))
     user = result.scalar_one_or_none()
     if not user:
         user = User(
@@ -240,11 +240,11 @@ async def github_oauth_callback(
             full_name=github_user.get("name") or github_login,
         )
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+        db.commit()
+        db.refresh(user)
 
     # Store/update GitHub integration
-    result = await db.execute(
+    result = db.execute(
         select(Integration).where(
             Integration.user_id == user.id,
             Integration.provider == "github"
@@ -271,8 +271,8 @@ async def github_oauth_callback(
         )
         db.add(integration)
 
-    await db.commit()
-    await db.refresh(integration)
+    db.commit()
+    db.refresh(integration)
 
     # Redirect to frontend dashboard with success
     frontend_url = "http://localhost:3000"
@@ -282,10 +282,10 @@ async def github_oauth_callback(
 @router.post("/github/disconnect")
 async def github_disconnect(
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
+    db: Session = Depends(get_db),
 ):
     """Disconnect GitHub integration."""
-    result = await db.execute(
+    result = db.execute(
         select(Integration).where(
             Integration.user_id == current_user.id,
             Integration.provider == "github"
@@ -297,5 +297,5 @@ async def github_disconnect(
         integration.access_token_encrypted = ""
         if integration.refresh_token_encrypted:
             integration.refresh_token_encrypted = ""
-        await db.commit()
+        db.commit()
     return {"message": "GitHub integration disconnected"}

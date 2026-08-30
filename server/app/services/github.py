@@ -18,7 +18,6 @@ from app.core.encryption import decrypt_token
 logger = logging.getLogger(__name__)
 
 GITHUB_API_BASE = "https://api.github.com"
-GITHUB_GRAPHQL_URL = "https://api.github.com/graphql"
 
 
 class GitHubClient:
@@ -26,7 +25,7 @@ class GitHubClient:
 
     def __init__(self, access_token: str):
         self.access_token = access_token
-        self.client = httpx.AsyncClient(
+        self.client = httpx.Client(
             base_url=GITHUB_API_BASE,
             headers={
                 "Authorization": f"Bearer {access_token}",
@@ -38,13 +37,13 @@ class GitHubClient:
         self._rate_limit_remaining = 5000
         self._rate_limit_reset = 0
 
-    async def close(self):
+    def close(self):
         """Close the HTTP client."""
-        await self.client.aclose()
+        self.client.close()
 
-    async def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
+    def _request(self, method: str, url: str, **kwargs) -> httpx.Response:
         """Make a request with rate limit handling."""
-        response = await self.client.request(method, url, **kwargs)
+        response = self.client.request(method, url, **kwargs)
 
         # Update rate limit info from headers
         if "X-RateLimit-Remaining" in response.headers:
@@ -63,12 +62,12 @@ class GitHubClient:
         response.raise_for_status()
         return response
 
-    async def get_user(self) -> Dict[str, Any]:
+    def get_user(self) -> Dict[str, Any]:
         """Get authenticated user info."""
-        response = await self._request("GET", "/user")
+        response = self._request("GET", "/user")
         return response.json()
 
-    async def get_user_repos(
+    def get_user_repos(
         self,
         per_page: int = 100,
         sort: str = "updated",
@@ -79,7 +78,7 @@ class GitHubClient:
         page = 1
 
         while True:
-            response = await self._request(
+            response = self._request(
                 "GET",
                 "/user/repos",
                 params={
@@ -100,7 +99,7 @@ class GitHubClient:
 
         return all_repos
 
-    async def get_repo_commits(
+    def get_repo_commits(
         self,
         owner: str,
         repo: str,
@@ -115,10 +114,10 @@ class GitHubClient:
         if until:
             params["until"] = until.isoformat()
 
-        response = await self._request("GET", f"/repos/{owner}/{repo}/commits", params=params)
+        response = self._request("GET", f"/repos/{owner}/{repo}/commits", params=params)
         return response.json()
 
-    async def get_repo_pull_requests(
+    def get_repo_pull_requests(
         self,
         owner: str,
         repo: str,
@@ -130,7 +129,7 @@ class GitHubClient:
         page = 1
 
         while True:
-            response = await self._request(
+            response = self._request(
                 "GET",
                 f"/repos/{owner}/{repo}/pulls",
                 params={
@@ -151,7 +150,7 @@ class GitHubClient:
 
         return all_prs
 
-    async def get_repo_issues(
+    def get_repo_issues(
         self,
         owner: str,
         repo: str,
@@ -164,13 +163,13 @@ class GitHubClient:
         if since:
             params["since"] = since.isoformat()
 
-        response = await self._request("GET", f"/repos/{owner}/{repo}/issues", params=params)
+        response = self._request("GET", f"/repos/{owner}/{repo}/issues", params=params)
         issues = response.json()
 
         # Filter out pull requests (GitHub API returns PRs in issues endpoint)
         return [issue for issue in issues if "pull_request" not in issue]
 
-    async def get_repo_releases(
+    def get_repo_releases(
         self,
         owner: str,
         repo: str,
@@ -181,7 +180,7 @@ class GitHubClient:
         page = 1
 
         while True:
-            response = await self._request(
+            response = self._request(
                 "GET",
                 f"/repos/{owner}/{repo}/releases",
                 params={"per_page": per_page, "page": page},
@@ -196,23 +195,23 @@ class GitHubClient:
 
         return all_releases
 
-    async def get_commit_details(self, owner: str, repo: str, sha: str) -> Dict[str, Any]:
+    def get_commit_details(self, owner: str, repo: str, sha: str) -> Dict[str, Any]:
         """Get detailed commit info including stats."""
-        response = await self._request("GET", f"/repos/{owner}/{repo}/commits/{sha}")
+        response = self._request("GET", f"/repos/{owner}/{repo}/commits/{sha}")
         return response.json()
 
-    async def get_pr_details(self, owner: str, repo: str, pr_number: int) -> Dict[str, Any]:
+    def get_pr_details(self, owner: str, repo: str, pr_number: int) -> Dict[str, Any]:
         """Get detailed PR info including reviews."""
-        response = await self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
+        response = self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
         return response.json()
 
-    async def get_pr_reviews(self, owner: str, repo: str, pr_number: int) -> List[Dict[str, Any]]:
+    def get_pr_reviews(self, owner: str, repo: str, pr_number: int) -> List[Dict[str, Any]]:
         """Get reviews for a PR."""
-        response = await self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}/reviews")
+        response = self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}/reviews")
         return response.json()
 
 
-async def create_github_client(encrypted_token: str) -> GitHubClient:
+def create_github_client(encrypted_token: str) -> GitHubClient:
     """Factory function to create a GitHub client from an encrypted token."""
     access_token = decrypt_token(encrypted_token)
     return GitHubClient(access_token)
