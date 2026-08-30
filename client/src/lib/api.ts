@@ -66,15 +66,16 @@ class ApiClient {
     return this.request<T>(endpoint, { ...options, method: "DELETE" });
   }
 
-  async postForm<T>(endpoint: string, formData: FormData, options?: RequestOptions): Promise<T> {
+  async postForm<T>(endpoint: string, data: URLSearchParams, options?: RequestOptions): Promise<T> {
     const { auth = true, headers, ...fetchOptions } = options || {};
     const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
 
     const response = await fetch(`${API_BASE}${endpoint}`, {
       ...fetchOptions,
       method: "POST",
-      body: formData,
+      body: data.toString(),
       headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
         ...(auth && token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
@@ -90,6 +91,10 @@ class ApiClient {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: "Request failed" }));
       throw new Error(error.detail || `HTTP error ${response.status}`);
+    }
+
+    if (response.status === 204) {
+      return undefined as T;
     }
 
     return response.json();
@@ -208,7 +213,7 @@ export const authApi = {
     api.post<Token>("/auth/register", data, { auth: false }),
 
   login: (email: string, password: string) =>
-    api.postForm<Token>("/auth/login", new URLSearchParams({ username: email, password }) as unknown as FormData, { auth: false }),
+    api.postForm<Token>("/auth/login", new URLSearchParams({ username: email, password }), { auth: false }),
 
   refresh: (refreshToken: string) =>
     api.post<Token>("/auth/refresh", { refresh_token: refreshToken }, { auth: false }),
