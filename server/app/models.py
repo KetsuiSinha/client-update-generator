@@ -55,8 +55,7 @@ class Client(Base):
     tone_profile = relationship(
         "ToneProfile",
         back_populates="clients",
-        foreign_keys=[Client.tone_profile_id],
-        primaryjoin="Client.tone_profile_id == ToneProfile.id"
+        foreign_keys=[Client.tone_profile_id]
     )
     integrations = relationship("ClientIntegration", back_populates="client")
     drafts = relationship("Draft", back_populates="client")
@@ -120,7 +119,6 @@ class ToneProfile(Base):
         "Client",
         back_populates="tone_profile",
         foreign_keys=[Client.tone_profile_id],
-        primaryjoin="ToneProfile.id == Client.tone_profile_id",
         remote_side=[id]
     )
 
