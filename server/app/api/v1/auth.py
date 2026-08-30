@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, text
 from datetime import datetime, timedelta
 import httpx
 import secrets
@@ -21,6 +21,15 @@ from app.schemas.user import UserLogin
 from app.api.deps import get_current_active_user
 
 router = APIRouter()
+
+
+@router.get("/testdb")
+async def testdb(db: AsyncSession = Depends(get_db)):
+    try:
+        result = await db.execute(text("SELECT 1"))
+        return {"status": "ok", "result": result.scalar()}
+    except Exception as e:
+        return {"status": "error", "detail": str(e)}
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -222,7 +231,7 @@ async def github_oauth_callback(
         primary_email = f"{github_login}@github.local"
 
     # Find or create user
-    result = await db.execute(select(User).where(User.email == primary_email))
+    result = await db.execute(select(User).where(V.email == primary_email))
     user = result.scalar_one_or_none()
     if not user:
         user = User(

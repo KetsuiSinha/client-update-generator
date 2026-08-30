@@ -22,19 +22,12 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    clients = relationship(
-        "Client",
-        back_populates="owner",
-        foreign_keys=[Client.owner_id]
-    )
-    tone_profiles = relationship(
-        "ToneProfile",
-        back_populates="owner",
-        foreign_keys=[ToneProfile.owner_id]
-    )
-    integrations = relationship("Integration", back_populates="owner")
-    drafts = relationship("Draft", back_populates="owner")
-    draft_edits = relationship("DraftEdit", back_populates="editor")
+    # Temporarily remove all relationships to isolate the issue
+    # clients = relationship("Client", back_populates="owner")
+    # tone_profiles = relationship("ToneProfile", back_populates="owner")
+    # integrations = relationship("Integration", back_populates="owner")
+    # drafts = relationship("Draft", back_populates="owner")
+    # draft_edits = relationship("DraftEdit", back_populates="editor")
 
 class Client(Base):
     __tablename__ = "clients"
@@ -47,18 +40,11 @@ class Client(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    owner = relationship(
-        "User",
-        back_populates="clients",
-        foreign_keys=[Client.owner_id]
-    )
-    tone_profile = relationship(
-        "ToneProfile",
-        back_populates="clients",
-        foreign_keys=[Client.tone_profile_id]
-    )
-    integrations = relationship("ClientIntegration", back_populates="client")
-    drafts = relationship("Draft", back_populates="client")
+    # Temporarily remove all relationships
+    # owner = relationship("User", back_populates="clients")
+    # tone_profile = relationship("ToneProfile", back_populates="clients")
+    # integrations = relationship("ClientIntegration", back_populates="client")
+    # drafts = relationship("Draft", back_populates="client")
 
 class IntegrationProvider(str, enum.Enum):
     GITHUB = "github"
@@ -81,8 +67,9 @@ class Integration(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    owner = relationship("User", back_populates="integrations")
-    client_links = relationship("ClientIntegration", back_populates="integration")
+    # Temporarily remove all relationships
+    # owner = relationship("User", back_populates="integrations")
+    # client_links = relationship("ClientIntegration", back_populates="integration")
 
 class ClientIntegration(Base):
     __tablename__ = "client_integrations"
@@ -94,8 +81,9 @@ class ClientIntegration(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    client = relationship("Client", back_populates="integrations")
-    integration = relationship("Integration", back_populates="client_links")
+    # Temporarily remove all relationships
+    # client = relationship("Client", back_populates="integrations")
+    # integration = relationship("Integration", back_populates="client_links")
 
 class ToneProfile(Base):
     __tablename__ = "tone_profiles"
@@ -110,16 +98,9 @@ class ToneProfile(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    owner = relationship(
-        "User",
-        back_populates="tone_profiles",
-        foreign_keys=[ToneProfile.owner_id]
-    )
-    clients = relationship(
-        "Client",
-        back_populates="tone_profile",
-        foreign_keys=[Client.tone_profile_id]
-    )
+    # Temporarily remove all relationships
+    # owner = relationship("User", back_populates="tone_profiles")
+    # clients = relationship("Client", back_populates="tone_profile")
 
 class ActivityEvent(Base):
     __tablename__ = "activity_events"
@@ -151,9 +132,10 @@ class Draft(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     sent_at = Column(DateTime(timezone.Time), nullable=True)
 
-    owner = relationship("User", back_populates="drafts")
-    client = relationship("Client", back_populates="drafts")
-    edits = relationship("DraftEdit", back_populates="draft")
+    # Temporarily remove all relationships
+    # owner = relationship("User", back_populates="drafts")
+    # client = relationship("Client", back_populates="drafts")
+    # edits = relationship("DraftEdit", back_populates="draft")
 
 class DraftEdit(Base):
     __tablename__ = "draft_edits"
@@ -164,5 +146,6 @@ class DraftEdit(Base):
     diff = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone.Time), server_default=func.now())
 
-    draft = relationship("Draft", back_populates="edits")
-    editor = relationship("User", back_populates="draft_edits")
+    # Temporarily remove all relationships
+    # draft = relationship("Draft", back_populates="edits")
+    # editor = relationship("User", back_populates="draft_edits")
