@@ -5,12 +5,10 @@ import enum
 
 from app.core.database import Base
 
-
 class UserRole(str, enum.Enum):
     FREE = "free"
     PRO = "pro"
     AGENCY = "agency"
-
 
 class User(Base):
     __tablename__ = "users"
@@ -34,7 +32,6 @@ class User(Base):
     drafts = relationship("Draft", back_populates="owner")
     draft_edits = relationship("DraftEdit", back_populates="editor")
 
-
 class Client(Base):
     __tablename__ = "clients"
 
@@ -49,18 +46,15 @@ class Client(Base):
     owner = relationship(
         "User",
         back_populates="clients",
-        foreign_keys=[Client.owner_id],
-        primaryjoin="Client.owner_id == User.id"
+        foreign_keys=[Client.owner_id]
     )
     tone_profile = relationship(
         "ToneProfile",
         back_populates="clients",
-        foreign_keys=[tone_profile_id],
-        primaryjoin="Client.tone_profile_id == ToneProfile.id"
+        foreign_keys=[Client.tone_profile_id]
     )
     integrations = relationship("ClientIntegration", back_populates="client")
     drafts = relationship("Draft", back_populates="client")
-
 
 class IntegrationProvider(str, enum.Enum):
     GITHUB = "github"
@@ -68,7 +62,6 @@ class IntegrationProvider(str, enum.Enum):
     SLACK = "slack"
     TRELLO = "trello"
     ASANA = "asana"
-
 
 class Integration(Base):
     __tablename__ = "integrations"
@@ -87,7 +80,6 @@ class Integration(Base):
     owner = relationship("User", back_populates="integrations")
     client_links = relationship("ClientIntegration", back_populates="integration")
 
-
 class ClientIntegration(Base):
     __tablename__ = "client_integrations"
 
@@ -100,7 +92,6 @@ class ClientIntegration(Base):
 
     client = relationship("Client", back_populates="integrations")
     integration = relationship("Integration", back_populates="client_links")
-
 
 class ToneProfile(Base):
     __tablename__ = "tone_profiles"
@@ -120,9 +111,8 @@ class ToneProfile(Base):
         "Client",
         back_populates="tone_profile",
         foreign_keys=[Client.tone_profile_id],
-        primaryjoin="ToneProfile.id == Client.tone_profile_id"
+        remote_side=[id]
     )
-
 
 class ActivityEvent(Base):
     __tablename__ = "activity_events"
@@ -138,7 +128,6 @@ class ActivityEvent(Base):
     relevance_score = Column(Integer, default=0)
     timestamp = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-
 
 class Draft(Base):
     __tablename__ = "drafts"
@@ -158,7 +147,6 @@ class Draft(Base):
     owner = relationship("User", back_populates="drafts")
     client = relationship("Client", back_populates="drafts")
     edits = relationship("DraftEdit", back_populates="draft")
-
 
 class DraftEdit(Base):
     __tablename__ = "draft_edits"
