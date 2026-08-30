@@ -106,7 +106,7 @@ class ToneProfile(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     owner = relationship("User", back_populates="tone_profiles")
-    clients = relationship("Client", back_populates="tone_profile")
+    clients = relationship("Client", back_populates="tone_profile", foreign_keys=[Client.tone_profile_id])
 
 
 class ActivityEvent(Base):
