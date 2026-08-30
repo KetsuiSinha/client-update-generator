@@ -27,8 +27,12 @@ class User(Base):
         back_populates="owner",
         foreign_keys=[Client.owner_id]
     )
+    tone_profiles = relationship(
+        "ToneProfile",
+        back_populates="owner",
+        foreign_keys=[ToneProfile.owner_id]
+    )
     integrations = relationship("Integration", back_populates="owner")
-    tone_profiles = relationship("ToneProfile", back_populates="owner")
     drafts = relationship("Draft", back_populates="owner")
     draft_edits = relationship("DraftEdit", back_populates="editor")
 
@@ -51,7 +55,8 @@ class Client(Base):
     tone_profile = relationship(
         "ToneProfile",
         back_populates="clients",
-        foreign_keys=[Client.tone_profile_id]
+        foreign_keys=[Client.tone_profile_id],
+        primaryjoin="Client.tone_profile_id == ToneProfile.id"
     )
     integrations = relationship("ClientIntegration", back_populates="client")
     drafts = relationship("Draft", back_populates="client")
@@ -106,11 +111,16 @@ class ToneProfile(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    owner = relationship("User", back_populates="tone_profiles")
+    owner = relationship(
+        "User",
+        back_populates="tone_profiles",
+        foreign_keys=[ToneProfile.owner_id]
+    )
     clients = relationship(
         "Client",
         back_populates="tone_profile",
         foreign_keys=[Client.tone_profile_id],
+        primaryjoin="ToneProfile.id == Client.tone_profile_id",
         remote_side=[id]
     )
 
