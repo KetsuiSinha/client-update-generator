@@ -119,8 +119,7 @@ class ToneProfile(Base):
     clients = relationship(
         "Client",
         back_populates="tone_profile",
-        foreign_keys="Client.tone_profile_id",
-        remote_side="ToneProfile.id"
+        foreign_keys="Client.tone_profile_id"
     )
 
 class ActivityEvent(Base):

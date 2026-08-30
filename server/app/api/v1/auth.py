@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.responses import RedirectResponse
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime, timedelta
@@ -17,7 +18,7 @@ from app.core.security import (
 from app.core.encryption import encrypt_token, decrypt_token
 from app.models import User, Integration
 from app.schemas import UserCreate, UserOut, Token, IntegrationProvider, IntegrationCreate
-from app.schemas.user import UserLogin
+from app.schemas.user import UserLogin  # keep for potential future use, but not used in login now
 from app.api.deps import get_current_active_user
 
 router = APIRouter()
@@ -45,12 +46,16 @@ async def register(
 
 @router.post("/login", response_model=Token)
 async def login(
-    user_in: UserLogin,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: AsyncSession = Depends(get_db),
 ):
-    existing = await db.execute(select(User).where(User.email == user_in.email))
+    # OAuth2PasswordRequestForm uses 'username' field for email/username
+    email = form_data.username
+    password = form_data.password
+
+    existing = await db.execute(select(User).where(User.email == email))
     user = existing.scalar_one_or_none()
-    if not user or not verify_password(user_in.password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
