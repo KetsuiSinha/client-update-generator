@@ -45,12 +45,29 @@ async def register(
 
 @router.post("/login", response_model=Token)
 async def login(
-    user_in: UserLogin,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    existing = await db.execute(select(User).where(User.email == user_in.email))
+    content_type = request.headers.get("content-type")
+    if content_type == "application/json":
+        data = await request.json()
+        email = data.get("email")
+        password = data.get("password")
+    else:
+        # form data
+        form_data = await request.form()
+        email = form_data.get("username")
+        password = form_data.get("password")
+
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Email and password are required",
+        )
+
+    existing = await db.execute(select(User).where(User.email == email))
     user = existing.scalar_one_or_none()
-    if not user or not verify_password(user_in.password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
