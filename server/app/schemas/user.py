@@ -26,6 +26,11 @@ class UserResponse(UserBase):
         from_attributes = True
 
 
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+
 class Token(BaseModel):
     access_token: str
     refresh_token: str
